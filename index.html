@@ -178,7 +178,7 @@
 // ══════════════════════════════════════════
 // 設定區 — 部署後請填入 Google Apps Script 網址
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/7';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFPEegk-sh09E5Ki_Z5zq2TIXdZA5HNpRoPx6GsWSAIyhAg8pqhIrpTIIw_IH83rHHfA/exec';
 
 const MENUS = [
   { id: 'big',     name: '大餐廳',   price: 85 },
@@ -197,15 +197,25 @@ let weekOrders = {}; // { "2025-06-09": { meal } }
 
 // ── Helpers ──────────────────────────────
 
+// 取得台灣時間的 Date 物件（修正時區）
+function getTaipeiNow() {
+  const now = new Date();
+  // 台灣 UTC+8
+  const taipeiOffset = 8 * 60;
+  const localOffset = now.getTimezoneOffset(); // 本地與UTC的差（分鐘，西為正）
+  const taipeiTime = new Date(now.getTime() + (taipeiOffset + localOffset) * 60000);
+  return taipeiTime;
+}
+
 // 判斷目前是否處於「週五 10:00 後」的下週預訂模式
 function isNextWeekMode() {
-  const now = new Date();
+  const now = getTaipeiNow();
   return now.getDay() === 5 && now.getHours() >= CUTOFF_HOUR;
 }
 
 // 取得週一為起點的五個工作日
 function getMondayWeek(offsetWeeks) {
-  const today = new Date();
+  const today = getTaipeiNow();
   const dow = today.getDay();
   const monday = new Date(today);
   monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offsetWeeks * 7);
@@ -224,11 +234,15 @@ function getWeekDays() {
 }
 
 function dateKey(d) {
-  return d.toISOString().split('T')[0];
+  // 使用台灣時間格式化日期，避免跨時區錯誤
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
 
 function isLocked(d) {
-  const today = new Date();
+  const today = getTaipeiNow();
   const todayKey = dateKey(today);
   const dKey = dateKey(d);
   // 下週預訂模式：下週全部可訂（不鎖定）
@@ -241,7 +255,7 @@ function isLocked(d) {
 
 function isPast(d) {
   if (isNextWeekMode()) return false;
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKey(getTaipeiNow());
   return dateKey(d) < todayKey;
 }
 
