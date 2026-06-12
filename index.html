@@ -178,7 +178,7 @@
 // ══════════════════════════════════════════
 // 設定區 — 部署後請填入 Google Apps Script 網址
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFPEegk-sh09E5Ki_Z5zq2TIXdZA5HNpRoPx6GsWSAIyhAg8pqhIrpTIIw_IH83rHHfA/exec';
+const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/8';
 
 const MENUS = [
   { id: 'big',     name: '大餐廳',   price: 85 },
@@ -291,7 +291,7 @@ async function doLogin() {
     localStorage.setItem('lunchUser', JSON.stringify(currentUser));
     enterOrderScreen();
   } catch(e) {
-    showToast('驗證失敗，請稍後再試', 'error');
+    showToast('驗證失敗：' + (e.message || JSON.stringify(e)), 'error');
   } finally {
     setLoading(false);
   }
@@ -429,7 +429,7 @@ async function saveOrder() {
     renderSummary();
     showToast('✓ 儲存成功', 'success');
   } catch(e) {
-    showToast('儲存失敗，請稍後再試', 'error');
+    showToast('儲存失敗：' + (e.message || JSON.stringify(e)), 'error');
   } finally {
     setLoading(false);
   }
