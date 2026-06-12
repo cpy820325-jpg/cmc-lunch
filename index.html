@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>中華汽車 便當訂購系統</title>
+<style>
+  :root {
+    --green: #1D9E75;
+    --green-dark: #0F6E56;
+    --green-light: #E1F5EE;
+    --green-mid: #9FE1CB;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --amber-border: #FAC775;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --gray-100: #f5f5f3;
+    --gray-200: #e8e7e2;
+    --gray-400: #b0afa8;
+    --gray-600: #6b6a65;
+    --gray-900: #1a1a18;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--green); padding: 20px 20px 16px; position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 17px; font-weight: 600; color: #fff; letter-spacing: 0.3px; }
+  .header .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 3px; }
+
+  /* Login screen */
+  #login-screen { padding: 24px 20px; max-width: 440px; margin: 0 auto; }
+  .login-card { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid var(--gray-200); }
+  .login-card h2 { font-size: 16px; font-weight: 600; color: var(--gray-900); margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--gray-600); margin-bottom: 6px; font-weight: 500; }
+  .field select, .field input { width: 100%; padding: 11px 14px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 15px; background: var(--gray-100); color: var(--gray-900); appearance: none; -webkit-appearance: none; }
+  .field select:focus, .field input:focus { outline: none; border-color: var(--green); background: #fff; }
+  .field .hint { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+  .btn-primary { width: 100%; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: background 0.15s; }
+  .btn-primary:active { background: var(--green-dark); }
+  .btn-primary:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+  /* Main order screen */
+  #order-screen { display: none; padding: 0 0 80px; max-width: 440px; margin: 0 auto; }
+  .user-bar { background: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--gray-200); }
+  .user-info { font-size: 13px; color: var(--gray-600); }
+  .user-info strong { color: var(--gray-900); }
+  .btn-logout { font-size: 12px; color: var(--gray-400); background: none; border: none; cursor: pointer; padding: 4px 8px; }
+
+  /* Week tabs */
+  .week-tabs { background: #fff; padding: 12px 20px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid var(--gray-200); -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .week-tabs::-webkit-scrollbar { display: none; }
+  .day-tab { flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid var(--gray-200); background: var(--gray-100); color: var(--gray-600); cursor: pointer; transition: all 0.15s; position: relative; }
+  .day-tab.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .day-tab.has-order::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background: var(--amber); border-radius: 50%; border: 1.5px solid #fff; }
+  .day-tab.active.has-order::after { border-color: var(--green); }
+  .day-tab.locked { opacity: 0.4; cursor: not-allowed; }
+  .day-tab.today { font-weight: 700; }
+
+  /* Order form */
+  .order-form { padding: 16px 20px; }
+  .day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .day-title { font-size: 15px; font-weight: 600; }
+  .lock-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 4px 10px; border-radius: 20px; background: var(--red-light); color: var(--red); }
+  .edit-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 4px 10px; border-radius: 20px; background: var(--green-light); color: var(--green-dark); }
+
+  /* Menu options */
+  .menu-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .menu-option { display: flex; align-items: center; padding: 14px; background: #fff; border-radius: var(--radius); border: 1.5px solid var(--gray-200); cursor: pointer; transition: all 0.15s; }
+  .menu-option.selected { border-color: var(--green); background: var(--green-light); }
+  .menu-option.disabled { opacity: 0.4; cursor: not-allowed; }
+  .menu-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gray-200); margin-right: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .menu-option.selected .menu-radio { border-color: var(--green); background: var(--green); }
+  .menu-option.selected .menu-radio::after { content: ''; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
+  .menu-name { flex: 1; font-size: 15px; font-weight: 500; }
+  .menu-option.selected .menu-name { color: var(--green-dark); }
+  .menu-price { font-size: 13px; color: var(--gray-400); font-weight: 500; }
+  .menu-option.selected .menu-price { color: var(--green); }
+
+  /* Save button */
+  .btn-save { width: 100%; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-save:active { background: var(--green-dark); }
+  .btn-save:disabled { background: var(--gray-400); cursor: not-allowed; }
+
+  /* Summary bar */
+  .summary-bar { background: #fff; border-top: 1px solid var(--gray-200); padding: 12px 20px; margin-top: 8px; }
+  .summary-bar h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--gray-900); }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .summary-item { background: var(--gray-100); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .summary-item .s-day { font-size: 11px; color: var(--gray-600); margin-bottom: 2px; }
+  .summary-item .s-meal { font-size: 13px; font-weight: 500; color: var(--gray-900); }
+  .summary-item .s-meal.none { color: var(--gray-400); font-weight: 400; }
+  .summary-item .s-price { font-size: 11px; color: var(--green); font-weight: 600; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--gray-900); color: #fff; padding: 12px 20px; border-radius: 24px; font-size: 13px; font-weight: 500; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; pointer-events: none; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green-dark); }
+  .toast.error { background: var(--red); }
+
+  /* Loading overlay */
+  .loading { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 998; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading.show { display: flex; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--gray-200); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 13px; color: var(--gray-600); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🍱 便當訂購系統</h1>
+  <div class="sub">中華汽車股份有限公司</div>
+</div>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>請先登入</h2>
+    <div class="field">
+      <label>部門</label>
+      <select id="dept">
+        <option value="">選擇部門</option>
+        <option value="產品專案部">產品專案部</option>
+        <option value="電機電子部">電機電子部</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>員工工號</label>
+      <input type="text" id="emp-id" placeholder="請輸入 6 位數工號" maxlength="6" inputmode="numeric" pattern="[0-9]{6}">
+      <div class="hint">格式：6 位數字，例如 212268</div>
+    </div>
+    <div class="field">
+      <label>姓名</label>
+      <input type="text" id="emp-name" placeholder="請輸入您的姓名">
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="doLogin()">進入訂餐</button>
+  </div>
+</div>
+
+<!-- Order screen -->
+<div id="order-screen">
+  <div class="user-bar">
+    <div class="user-info">
+      <span id="display-dept"></span> · <strong id="display-name"></strong> (<span id="display-id"></span>)
+    </div>
+    <button class="btn-logout" onclick="doLogout()">登出</button>
+  </div>
+
+  <div class="week-tabs" id="week-tabs"></div>
+
+  <div class="order-form" id="order-form">
+    <div class="day-header">
+      <div class="day-title" id="day-title"></div>
+      <div id="day-badge"></div>
+    </div>
+    <div class="menu-grid" id="menu-grid"></div>
+    <button class="btn-save" id="save-btn" onclick="saveOrder()">儲存這天的訂單</button>
+  </div>
+
+  <div class="summary-bar">
+    <h3>本週訂單總覽</h3>
+    <div class="summary-grid" id="summary-grid"></div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <p id="loading-text">處理中...</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// 設定區 — 部署後請填入 Google Apps Script 網址
+// ══════════════════════════════════════════
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFPEegk-sh09E5Ki_Z5zq2TIXdZA5HNpRoPx6GsWSAIyhAg8pqhIrpTIIw_IH83rHHfA/exec';
+
+const MENUS = [
+  { id: 'big',     name: '大餐廳',   price: 85 },
+  { id: 'small',   name: '小餐廳',   price: 80 },
+  { id: 'veg',     name: '素食',     price: 70 },
+  { id: 'healthy', name: '健康便當', price: 90 },
+  { id: 'none',    name: '今天不訂', price: 0  },
+];
+
+const DAYS_ZH = ['日','一','二','三','四','五','六'];
+const CUTOFF_HOUR = 10;
+
+let currentUser = null;
+let currentDayIdx = 0;
+let weekOrders = {}; // { "2025-06-09": { meal } }
+
+// ── Helpers ──────────────────────────────
+function getWeekDays() {
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const days = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+function dateKey(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function isLocked(d) {
+  const today = new Date();
+  const todayKey = dateKey(today);
+  const dKey = dateKey(d);
+  if (dKey < todayKey) return true;
+  if (dKey === todayKey && today.getHours() >= CUTOFF_HOUR) return true;
+  return false;
+}
+
+function isPast(d) {
+  const todayKey = dateKey(new Date());
+  return dateKey(d) < todayKey;
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+function setLoading(show, text = '處理中...') {
+  document.getElementById('loading').classList.toggle('show', show);
+  document.getElementById('loading-text').textContent = text;
+}
+
+// ── Login ─────────────────────────────────
+async function doLogin() {
+  const dept = document.getElementById('dept').value;
+  const empId = document.getElementById('emp-id').value.trim();
+  const empName = document.getElementById('emp-name').value.trim();
+  if (!dept) { showToast('請選擇部門', 'error'); return; }
+  if (!/^\d{6}$/.test(empId)) { showToast('工號必須為 6 位數字', 'error'); return; }
+  if (!empName) { showToast('請輸入姓名', 'error'); return; }
+
+  setLoading(true, '驗證身分中...');
+  try {
+    const res = await gasRequest({ action: 'validateEmployee', dept, empId, empName });
+    if (!res.valid) {
+      showToast(res.error || '工號或姓名不符，請確認後再試', 'error');
+      return;
+    }
+    currentUser = { dept, empId, empName: res.empName || empName };
+    localStorage.setItem('lunchUser', JSON.stringify(currentUser));
+    enterOrderScreen();
+  } catch(e) {
+    showToast('驗證失敗，請稍後再試', 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  weekOrders = {};
+  document.getElementById('login-screen').style.display = 'block';
+  document.getElementById('order-screen').style.display = 'none';
+}
+
+function enterOrderScreen() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('order-screen').style.display = 'block';
+  document.getElementById('display-dept').textContent = currentUser.dept;
+  document.getElementById('display-name').textContent = currentUser.empName;
+  document.getElementById('display-id').textContent = currentUser.empId;
+  buildWeekTabs();
+  loadWeekOrders();
+}
+
+// ── Week tabs ─────────────────────────────
+function buildWeekTabs() {
+  const tabs = document.getElementById('week-tabs');
+  const days = getWeekDays();
+  const todayKey = dateKey(new Date());
+  tabs.innerHTML = '';
+  days.forEach((d, i) => {
+    const btn = document.createElement('button');
+    const dKey = dateKey(d);
+    btn.className = 'day-tab' +
+      (dKey === todayKey ? ' today' : '') +
+      (isPast(d) ? ' locked' : '') +
+      (weekOrders[dKey] ? ' has-order' : '');
+    btn.innerHTML = `<div style="font-size:10px;opacity:0.7">週${DAYS_ZH[d.getDay()]}</div><div>${d.getMonth()+1}/${d.getDate()}</div>`;
+    btn.onclick = () => selectDay(i);
+    if (i === currentDayIdx) btn.classList.add('active');
+    tabs.appendChild(btn);
+  });
+}
+
+function selectDay(idx) {
+  currentDayIdx = idx;
+  buildWeekTabs();
+  renderDayForm();
+}
+
+// ── Day form ──────────────────────────────
+function renderDayForm() {
+  const days = getWeekDays();
+  const d = days[currentDayIdx];
+  const dKey = dateKey(d);
+  const locked = isLocked(d);
+  const order = weekOrders[dKey] || {};
+
+  document.getElementById('day-title').textContent =
+    `週${DAYS_ZH[d.getDay()]}  ${d.getMonth()+1}月${d.getDate()}日`;
+
+  const badge = document.getElementById('day-badge');
+  if (locked) {
+    badge.innerHTML = '<span class="lock-badge">🔒 已截止</span>';
+  } else if (order.meal) {
+    badge.innerHTML = '<span class="edit-badge">✏️ 可修改</span>';
+  } else {
+    badge.innerHTML = '';
+  }
+
+  // Menu
+  const grid = document.getElementById('menu-grid');
+  grid.innerHTML = '';
+  MENUS.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'menu-option' +
+      (order.meal === m.id ? ' selected' : '') +
+      (locked ? ' disabled' : '');
+    div.innerHTML = `
+      <div class="menu-radio"></div>
+      <div class="menu-name">${m.name}</div>
+      <div class="menu-price">${m.price > 0 ? 'NT$' + m.price : '—'}</div>`;
+    if (!locked) div.onclick = () => selectMeal(m.id);
+    grid.appendChild(div);
+  });
+
+  // Save button
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = locked;
+  saveBtn.textContent = locked ? '已截止，無法修改' : '儲存這天的訂單';
+}
+
+function selectMeal(mealId) {
+  const days = getWeekDays();
+  const dKey = dateKey(days[currentDayIdx]);
+  if (!weekOrders[dKey]) weekOrders[dKey] = {};
+  weekOrders[dKey].meal = mealId;
+  renderDayForm();
+  renderSummary();
+}
+
+// ── Save ──────────────────────────────────
+async function saveOrder() {
+  const days = getWeekDays();
+  const d = days[currentDayIdx];
+  const dKey = dateKey(d);
+  const order = weekOrders[dKey] || {};
+
+  if (!order.meal) { showToast('請先選擇便當種類', 'error'); return; }
+
+  weekOrders[dKey] = order;
+  const meal = MENUS.find(m => m.id === order.meal);
+
+  setLoading(true, '儲存中...');
+  try {
+    const payload = {
+      action: 'saveOrder',
+      dept: currentUser.dept,
+      empId: currentUser.empId,
+      empName: currentUser.empName,
+      date: dKey,
+      meal: meal.name,
+      price: meal.price,
+    };
+    await gasRequest(payload);
+    buildWeekTabs();
+    renderSummary();
+    showToast('✓ 儲存成功', 'success');
+  } catch(e) {
+    showToast('儲存失敗，請稍後再試', 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Load ──────────────────────────────────
+async function loadWeekOrders() {
+  setLoading(true, '載入訂單中...');
+  const days = getWeekDays();
+  const startDate = dateKey(days[0]);
+  const endDate = dateKey(days[4]);
+  try {
+    const res = await gasRequest({
+      action: 'getOrders',
+      empId: currentUser.empId,
+      startDate,
+      endDate,
+    });
+    weekOrders = {};
+    (res.orders || []).forEach(o => {
+      const menuItem = MENUS.find(m => m.name === o.meal);
+      weekOrders[o.date] = { meal: menuItem ? menuItem.id : null };
+    });
+  } catch(e) {
+    // silently continue with empty orders
+  } finally {
+    setLoading(false);
+    // Find today's index or first unlocked
+    const todayKey = dateKey(new Date());
+    const idx = days.findIndex(d => dateKey(d) === todayKey);
+    currentDayIdx = idx >= 0 ? idx : 0;
+    buildWeekTabs();
+    renderDayForm();
+    renderSummary();
+  }
+}
+
+// ── Summary ───────────────────────────────
+function renderSummary() {
+  const days = getWeekDays();
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  days.forEach(d => {
+    const dKey = dateKey(d);
+    const order = weekOrders[dKey];
+    const meal = order ? MENUS.find(m => m.id === order.meal) : null;
+    const div = document.createElement('div');
+    div.className = 'summary-item';
+    div.innerHTML = `
+      <div class="s-day">週${DAYS_ZH[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}</div>
+      <div class="s-meal ${meal ? '' : 'none'}">${meal ? meal.name : '未訂'}</div>
+      ${meal && meal.price > 0 ? `<div class="s-price">NT$ ${meal.price}</div>` : ''}`;
+    grid.appendChild(div);
+  });
+}
+
+// ── GAS API ───────────────────────────────
+async function gasRequest(payload) {
+  if (GAS_URL === 'YOUR_GAS_WEBAPP_URL_HERE') {
+    await new Promise(r => setTimeout(r, 600));
+    if (payload.action === 'validateEmployee') return { valid: true, empName: payload.empName };
+    if (payload.action === 'getOrders') return { orders: [] };
+    return { success: true };
+  }
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Network error');
+  return res.json();
+}
+
+// ── Init ──────────────────────────────────
+window.onload = () => {
+  const saved = localStorage.getItem('lunchUser');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      enterOrderScreen();
+    } catch { localStorage.removeItem('lunchUser'); }
+  }
+};
+</script>
+</body>
+</html>
