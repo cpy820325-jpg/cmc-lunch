@@ -178,7 +178,7 @@
 // ══════════════════════════════════════════
 // 設定區 — 部署後請填入 Google Apps Script 網址
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFPEegk-sh09E5Ki_Z5zq2TIXdZA5HNpRoPx6GsWSAIyhAg8pqhIrpTIIw_IH83rHHfA/exec';
+const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/7';
 
 const MENUS = [
   { id: 'big',     name: '大餐廳',   price: 85 },
@@ -196,11 +196,19 @@ let currentDayIdx = 0;
 let weekOrders = {}; // { "2025-06-09": { meal } }
 
 // ── Helpers ──────────────────────────────
-function getWeekDays() {
+
+// 判斷目前是否處於「週五 10:00 後」的下週預訂模式
+function isNextWeekMode() {
+  const now = new Date();
+  return now.getDay() === 5 && now.getHours() >= CUTOFF_HOUR;
+}
+
+// 取得週一為起點的五個工作日
+function getMondayWeek(offsetWeeks) {
   const today = new Date();
   const dow = today.getDay();
   const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offsetWeeks * 7);
   const days = [];
   for (let i = 0; i < 5; i++) {
     const d = new Date(monday);
@@ -208,6 +216,11 @@ function getWeekDays() {
     days.push(d);
   }
   return days;
+}
+
+// 顯示本週或下週（週五10點後自動切換下週）
+function getWeekDays() {
+  return getMondayWeek(isNextWeekMode() ? 1 : 0);
 }
 
 function dateKey(d) {
@@ -218,12 +231,16 @@ function isLocked(d) {
   const today = new Date();
   const todayKey = dateKey(today);
   const dKey = dateKey(d);
+  // 下週預訂模式：下週全部可訂（不鎖定）
+  if (isNextWeekMode()) return false;
+  // 一般模式：過去日期或當天10點後鎖定
   if (dKey < todayKey) return true;
   if (dKey === todayKey && today.getHours() >= CUTOFF_HOUR) return true;
   return false;
 }
 
 function isPast(d) {
+  if (isNextWeekMode()) return false;
   const todayKey = dateKey(new Date());
   return dateKey(d) < todayKey;
 }
@@ -288,7 +305,17 @@ function buildWeekTabs() {
   const tabs = document.getElementById('week-tabs');
   const days = getWeekDays();
   const todayKey = dateKey(new Date());
+  const nextMode = isNextWeekMode();
   tabs.innerHTML = '';
+
+  // 週次標籤
+  const label = document.createElement('div');
+  label.style.cssText = 'flex-shrink:0;display:flex;align-items:center;padding:0 4px 0 0;';
+  label.innerHTML = nextMode
+    ? '<span style="font-size:11px;font-weight:700;color:#BA7517;background:#FAEEDA;padding:4px 10px;border-radius:20px;white-space:nowrap;">📅 下週</span>'
+    : '<span style="font-size:11px;color:#6b6a65;padding:4px 6px;white-space:nowrap;">本週</span>';
+  tabs.appendChild(label);
+
   days.forEach((d, i) => {
     const btn = document.createElement('button');
     const dKey = dateKey(d);
