@@ -85,6 +85,9 @@
   .btn-save { width: 100%; padding: 14px; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
   .btn-save:active { background: var(--green-dark); }
   .btn-save:disabled { background: var(--gray-400); cursor: not-allowed; }
+  .btn-save-all { width: 100%; padding: 14px; background: #fff; color: var(--green-dark); border: 2px solid var(--green); border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 10px; }
+  .btn-save-all:active { background: var(--green-light); }
+  .btn-save-all:disabled { background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200); cursor: not-allowed; }
 
   /* Summary bar */
   .summary-bar { background: #fff; border-top: 1px solid var(--gray-200); padding: 12px 20px; margin-top: 8px; }
@@ -156,6 +159,7 @@
     </div>
     <div class="menu-grid" id="menu-grid"></div>
     <button class="btn-save" id="save-btn" onclick="saveOrder()">儲存這天的訂單</button>
+    <button class="btn-save-all" id="save-all-btn" onclick="saveAllOrders()">儲存本週全部訂單</button>
   </div>
 
   <div class="summary-bar">
@@ -458,6 +462,55 @@ async function loadWeekOrders() {
     buildWeekTabs();
     renderDayForm();
     renderSummary();
+  }
+}
+
+// ── Save All ─────────────────────────────
+async function saveAllOrders() {
+  const days = getWeekDays();
+  // 找出有選便當且未鎖定的天
+  const toSave = days.filter(d => {
+    const dKey = dateKey(d);
+    return weekOrders[dKey] && weekOrders[dKey].meal && !isLocked(d);
+  });
+
+  if (toSave.length === 0) {
+    showToast('沒有可儲存的訂單', 'error');
+    return;
+  }
+
+  setLoading(true, '儲存本週訂單中...');
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const d of toSave) {
+    const dKey = dateKey(d);
+    const order = weekOrders[dKey];
+    const meal = MENUS.find(m => m.id === order.meal);
+    try {
+      await gasRequest({
+        action: 'saveOrder',
+        dept: currentUser.dept,
+        empId: currentUser.empId,
+        empName: currentUser.empName,
+        date: dKey,
+        meal: meal.name,
+        price: meal.price,
+      });
+      successCount++;
+    } catch(e) {
+      failCount++;
+    }
+  }
+
+  setLoading(false);
+  buildWeekTabs();
+  renderSummary();
+
+  if (failCount === 0) {
+    showToast('✓ 本週 ' + successCount + ' 天訂單已全部儲存', 'success');
+  } else {
+    showToast('儲存完成：' + successCount + ' 成功，' + failCount + ' 失敗', 'error');
   }
 }
 
