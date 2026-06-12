@@ -178,7 +178,7 @@
 // ══════════════════════════════════════════
 // 設定區 — 部署後請填入 Google Apps Script 網址
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/9';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzFPEegk-sh09E5Ki_Z5zq2TIXdZA5HNpRoPx6GsWSAIyhAg8pqhIrpTIIw_IH83rHHfA/exec';
 
 const MENUS = [
   { id: 'big',     name: '大餐廳',   price: 85 },
@@ -494,10 +494,13 @@ async function gasRequest(payload) {
     if (payload.action === 'getOrders') return { orders: [] };
     return { success: true };
   }
-  // 用 GET + query string，GAS doGet 處理，避免 CORS 問題
-  const encoded = encodeURIComponent(JSON.stringify(payload));
-  const url = GAS_URL + '?payload=' + encoded;
-  const res = await fetch(url, { method: 'GET' });
+  // GAS 用 form POST 方式，繞過 CORS preflight
+  const form = new FormData();
+  form.append('payload', JSON.stringify(payload));
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: new URLSearchParams({ payload: JSON.stringify(payload) }),
+  });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
   if (data.error) throw new Error(data.error);
