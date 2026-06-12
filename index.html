@@ -452,7 +452,7 @@ async function loadWeekOrders() {
       weekOrders[o.date] = { meal: menuItem ? menuItem.id : null };
     });
   } catch(e) {
-    // silently continue with empty orders
+    showToast('載入訂單失敗：' + (e.message || ''), 'error');
   } finally {
     setLoading(false);
     // Find today's index or first unlocked
