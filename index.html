@@ -178,7 +178,7 @@
 // ══════════════════════════════════════════
 // 設定區 — 部署後請填入 Google Apps Script 網址
 // ══════════════════════════════════════════
-const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/8';
+const GAS_URL = 'https://script.google.com/macros/library/d/1c6r-ln4xCySDoNx9omc1f04KNop1hYP-Elb2IsCdHvBPbxD0FxjdpcHF/9';
 
 const MENUS = [
   { id: 'big',     name: '大餐廳',   price: 85 },
@@ -494,26 +494,14 @@ async function gasRequest(payload) {
     if (payload.action === 'getOrders') return { orders: [] };
     return { success: true };
   }
-  // GAS 用 JSONP 繞過 CORS
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now();
-    const script = document.createElement('script');
-    const timer = setTimeout(() => {
-      delete window[cbName];
-      if (script.parentNode) document.body.removeChild(script);
-      reject(new Error('Timeout'));
-    }, 15000);
-    window[cbName] = (data) => {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) document.body.removeChild(script);
-      resolve(data);
-    };
-    const encoded = encodeURIComponent(JSON.stringify(payload));
-    script.src = GAS_URL + '?callback=' + cbName + '&payload=' + encoded;
-    script.onerror = () => { clearTimeout(timer); reject(new Error('Script error')); };
-    document.body.appendChild(script);
-  });
+  // 用 GET + query string，GAS doGet 處理，避免 CORS 問題
+  const encoded = encodeURIComponent(JSON.stringify(payload));
+  const url = GAS_URL + '?payload=' + encoded;
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 // ── Init ──────────────────────────────────
